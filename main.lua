@@ -1,6 +1,7 @@
 local player
 local spikeData
 local game = {}
+local laserData
 
 local function resetGame()
     game.score = 0
@@ -8,13 +9,10 @@ local function resetGame()
     game.totalTime = 0
     game.timeTillNextBoost = 0
     game.gameOver = false
-    
     player.speed = 300
     player.y = love.graphics.getHeight() / 2
     player.x = love.graphics.getWidth() / 8
-
     spikeData.speed = 400
-
     game.spikes = {}
     for i = 1, 3 do
         local newSpike = {
@@ -47,7 +45,22 @@ function love.load()
     local success, font = pcall(love.graphics.newFont, "JetBrainsMono-Regular.ttf", 18)
     game.myFont = success and font or love.graphics.newFont(18)
     game.spikes = {}
+    game.lasers = {}
     game.level = 1
+    laserData = {
+        width = monitorWidth,
+        height = 100,
+        bottomlimit = monitorHeight - laserData.height,
+        upperlimit = 0,
+        warningTime = 2,
+        activeTime = 1,
+        timer = 0,
+        warning = true,
+        active = false,
+        blinkRate = 0.15,
+        visible = true,
+        blinkTimer = 0
+    }
     spikeData = {
         spikeHeight = 20,
         speed = 400,
@@ -72,24 +85,48 @@ function checkCollision(a, b)
            b.y < a.y + a.height
 end
 
-local function getRandY()
+local function getRandYForSpikes()
     local y = math.random(0, spikeData.spikeLimit)
+    return y
+end
+
+local function getRandYForLasers()
+    local y = math.random(0, laserData.bottomlimit)
     return y
 end
 
 local function newSpike()
     local newSpike = {
         x = game.rightSide,
-        y =  getRandY(),
+        y =  getRandYForSpikes(),
         width = spikeData.spikeWidth,
         height = spikeData.spikeHeight
     }
     table.insert(game.spikes, newSpike)
 end
 
+local function newLaser()
+    local monitorHeight = love.graphics.getWidth()
+    local newLaser = {
+        width = monitorHeight,
+        height = 100,
+        bottomlimit = monitorHeight - laserData.height,
+        upperlimit = 0,
+        warningTime = 2,
+        activeTime = 1,
+        timer = 0,
+        warning = true,
+        active = false,
+        blinkRate = 0.15,
+        visible = true,
+        blinkTimer = 0
+    }
+    table.insert(game.lasers, newLaser)
+end
+
 local function moveSpikeBack(spike)
     spike.x = game.rightSide
-    spike.y = getRandY()
+    spike.y = getRandYForSpikes()
 end
 
 local function moveSpike(spike, dt)
@@ -133,6 +170,32 @@ function love.update(dt)
             spikeData.speed = spikeData.speed + (game.speedInc + 1)
             game.level = game.level + 1
             newSpike()
+        end
+
+        for _, laser in ipairs(game.lasers) do
+            if checkCollision(player, laser) then
+                game.gameOver = true
+            end
+            laser.timer = laser.timer + dt
+            if laser.warning then
+                laser.blinkTimer = laser.blinkTimer + dt
+                if laser.blinkTimer >= laser.blinkRate then
+                    laser.visible = not laser.visible
+                    laser.blinkTimer = 0
+                end
+                if laser.timer >= laser.warningTime then
+                    laser.warning = false
+                    laser.active = true
+                    laser.timer = 0
+                    laser.visible = true
+                end
+            elseif laser.active then
+                if laser.timer >= laser.activeTime then
+                    laser.active = false
+                    laser.warning = true
+                    laser.timer = 0
+                end
+            end
         end
     else
         if love.keyboard.isDown("r") then
