@@ -228,21 +228,9 @@ function love.draw()
         end
         for _, laser in ipairs(game.lasers) do
             if laser.state == "warning" then
-                love.graphics.rectangle(
-                    "fill",
-                    laser.x,
-                    laser.y + laser.height/2 - 5,
-                    laser.width,
-                    10
-                )
+                love.graphics.rectangle("fill", laser.x, laser.y + laser.height/2 - 5, laser.width, 10)
             elseif laser.state == "active" then
-                love.graphics.rectangle(
-                    "fill",
-                    laser.x,
-                    laser.y,
-                    laser.width,
-                    laser.height
-                )
+                love.graphics.rectangle("fill", laser.x, laser.y, laser.width, laser.height)
             end
         end
         love.graphics.setColor(1, 1, 1)
