@@ -1,22 +1,13 @@
 local player
-local score
-local timeTillNextBoost
-local speedInc
-local upgradeTime
-local myFont
-local rightSide
-local totalTime
-local spikes
 local spikeData
-local level
-local gameOver
+local game = {}
 
 local function resetGame()
-    score = 0
-    level = 1
-    totalTime = 0
-    timeTillNextBoost = 0
-    gameOver = false
+    game.score = 0
+    game.level = 1
+    game.totalTime = 0
+    game.timeTillNextBoost = 0
+    game.gameOver = false
     
     player.speed = 300
     player.y = love.graphics.getHeight() / 2
@@ -24,39 +15,39 @@ local function resetGame()
 
     spikeData.speed = 400
 
-    spikes = {}
+    game.spikes = {}
     for i = 1, 3 do
         local newSpike = {
-            x = rightSide + (i * 300),
+            x = game.rightSide + (i * 300),
             y = math.random(0, spikeData.spikeLimit),
             width = spikeData.spikeWidth,
             height = spikeData.spikeHeight
         }
-        table.insert(spikes, newSpike)
+        table.insert(game.spikes, newSpike)
     end
 end
 
 function love.load()
     local monitorWidth, monitorHeight = love.window.getDesktopDimensions()
-    rightSide = monitorWidth
+    game.rightSide = monitorWidth
     player = {}
     player.speed = 300
     player.y = monitorHeight / 2
     player.x = monitorWidth / 8
-    player.width = 80
-    player.height = 80
+    player.width = 60
+    player.height = 60
     player.upperlimit = 0
     player.bottomlimit = monitorHeight - player.height
-    timeTillNextBoost = 0
-    totalTime = 0
-    speedInc = 100
-    score = 0
-    upgradeTime = 15
-    gameOver = false
+    game.timeTillNextBoost = 0
+    game.totalTime = 0
+    game.speedInc = 100
+    game.score = 0
+    game.upgradeTime = 15
+    game.gameOver = false
     local success, font = pcall(love.graphics.newFont, "JetBrainsMono-Regular.ttf", 18)
-    myFont = success and font or love.graphics.newFont(18)
-    spikes = {}
-    level = 1
+    game.myFont = success and font or love.graphics.newFont(18)
+    game.spikes = {}
+    game.level = 1
     spikeData = {
         spikeHeight = 20,
         speed = 400,
@@ -65,12 +56,12 @@ function love.load()
     spikeData.spikeLimit = monitorHeight - spikeData.spikeHeight
     for i = 1, 3 do
         local newSpike = {
-            x = rightSide + (i * 300),
+            x = game.rightSide + (i * 300),
             y = math.random(0, spikeData.spikeLimit),
             width = spikeData.spikeWidth,
             height = spikeData.spikeHeight
         }
-        table.insert(spikes, newSpike)
+        table.insert(game.spikes, newSpike)
     end
 end
 
@@ -88,16 +79,16 @@ end
 
 local function newSpike()
     local newSpike = {
-        x = rightSide,
+        x = game.rightSide,
         y =  getRandY(),
         width = spikeData.spikeWidth,
         height = spikeData.spikeHeight
     }
-    table.insert(spikes, newSpike)
+    table.insert(game.spikes, newSpike)
 end
 
 local function moveSpikeBack(spike)
-    spike.x = rightSide
+    spike.x = game.rightSide
     spike.y = getRandY()
 end
 
@@ -110,9 +101,9 @@ local function moveSpike(spike, dt)
 end
 
 function love.update(dt)
-    if not gameOver then
-        timeTillNextBoost = timeTillNextBoost + dt
-        totalTime = totalTime + dt
+    if not game.gameOver then
+        game.timeTillNextBoost = game.timeTillNextBoost + dt
+        game.totalTime = game.totalTime + dt
 
         if love.keyboard.isDown("space") then
             if not (player.y <= player.upperlimit) then
@@ -128,45 +119,45 @@ function love.update(dt)
             end
         end
 
-        for _, spike in ipairs(spikes) do
+        for _, spike in ipairs(game.spikes) do
             if checkCollision(player, spike) then
-                gameOver = true
+                game.gameOver = true
             end
             moveSpike(spike, dt)
         end
 
-        if timeTillNextBoost >= upgradeTime then
-            player.speed = player.speed + speedInc
-            timeTillNextBoost = 0
-            score = score + 1
-            spikeData.speed = spikeData.speed + (speedInc + 1)
-            level = level + 1
+        if game.timeTillNextBoost >= game.upgradeTime then
+            player.speed = player.speed + game.speedInc
+            game.timeTillNextBoost = 0
+            game.score = game.score + 1
+            spikeData.speed = spikeData.speed + (game.speedInc + 1)
+            game.level = game.level + 1
             newSpike()
         end
     else
         if love.keyboard.isDown("r") then
-            gameOver = false
+            game.gameOver = false
             resetGame()
         end
     end
 end
 
 function love.draw()
-    if not gameOver then
-        love.graphics.setFont(myFont)
+    if not game.gameOver then
+        love.graphics.setFont(game.myFont)
         love.graphics.setColor(0.3, 1, 0.3)
         love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
         love.graphics.setColor(1, 0.3, 0.3)
         love.graphics.setColor(1, 0.3, 0.3)
-        for _, spike in ipairs(spikes) do
+        for _, spike in ipairs(game.spikes) do
             love.graphics.rectangle("fill", spike.x, spike.y, spike.spikeWidth or 20, spikeData.spikeHeight)
         end
         love.graphics.setColor(1, 1, 1)
-        love.graphics.print(string.format("Score: %03d", score), 20, 20)
+        love.graphics.print(string.format("game.score: %03d", game.score), 20, 20)
         love.graphics.print(string.format("Speed: %03d", player.speed), 20, 40)
-        love.graphics.print(string.format("Time till next boost: %02d", upgradeTime - timeTillNextBoost), 20, 60)
-        love.graphics.print(string.format("Total time: %03d", totalTime), 20, 80)
-        love.graphics.print(string.format("Level: %02d", level), 20, 100)
+        love.graphics.print(string.format("Time till next boost: %02d", game.upgradeTime - game.timeTillNextBoost), 20, 60)
+        love.graphics.print(string.format("Total time: %03d", game.totalTime), 20, 80)
+        love.graphics.print(string.format("game.level: %02d", game.level), 20, 100)
     else
         love.graphics.setColor(1, 0, 0)
         local windowWidth = love.graphics.getWidth()
