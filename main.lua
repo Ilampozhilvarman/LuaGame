@@ -14,6 +14,7 @@ local function resetGame()
     player.x = love.graphics.getWidth() / 8
     spikeData.speed = 400
     game.spikes = {}
+    game.lasers = {}
     for i = 1, 3 do
         local newSpike = {
             x = game.rightSide + (i * 300),
@@ -50,16 +51,17 @@ function love.load()
     laserData = {
         width = monitorWidth,
         height = 100,
-        bottomlimit = monitorHeight - laserData.height,
+        bottomlimit = monitorHeight - 100,
         upperlimit = 0,
         warningTime = 2,
         activeTime = 1,
         timer = 0,
-        warning = true,
-        active = false,
+        state = "warning",
         blinkRate = 0.15,
         visible = true,
-        blinkTimer = 0
+        blinkTimer = 0,
+        lifeTime = 0,
+        maxLifeTime = 5
     }
     spikeData = {
         spikeHeight = 20,
@@ -106,20 +108,22 @@ local function newSpike()
 end
 
 local function newLaser()
-    local monitorHeight = love.graphics.getWidth()
     local newLaser = {
-        width = monitorHeight,
+        x = 0,
+        y = getRandYForLasers(),
+        width = laserData.width,
         height = 100,
-        bottomlimit = monitorHeight - laserData.height,
-        upperlimit = 0,
+        bottomlimit = laserData.bottomlimit,
+        upperlimit = laserData.upperlimit,
         warningTime = 2,
         activeTime = 1,
         timer = 0,
-        warning = true,
-        active = false,
+        state = "warning",
         blinkRate = 0.15,
         visible = true,
-        blinkTimer = 0
+        blinkTimer = 0,
+        lifeTime = 0,
+        maxLifeTime = 5
     }
     table.insert(game.lasers, newLaser)
 end
@@ -172,29 +176,36 @@ function love.update(dt)
             newSpike()
         end
 
+        if math.random(0, 10) < 1 + game.level / 10 then 
+            newLaser()
+        end
+
         for _, laser in ipairs(game.lasers) do
-            if checkCollision(player, laser) then
+            if laser.state == "active" and checkCollision(player, laser) then
                 game.gameOver = true
             end
+            laser.lifeTime = laser.lifeTime + dt
             laser.timer = laser.timer + dt
-            if laser.warning then
+            if laser.state == "warning" then
                 laser.blinkTimer = laser.blinkTimer + dt
                 if laser.blinkTimer >= laser.blinkRate then
                     laser.visible = not laser.visible
                     laser.blinkTimer = 0
                 end
                 if laser.timer >= laser.warningTime then
-                    laser.warning = false
-                    laser.active = true
+                    laser.state = "active"
                     laser.timer = 0
                     laser.visible = true
                 end
-            elseif laser.active then
+            elseif laser.state == "active" then
                 if laser.timer >= laser.activeTime then
-                    laser.active = false
-                    laser.warning = true
-                    laser.timer = 0
+                    laser.state = "dead"
                 end
+            end
+        end
+        for i = #game.lasers, 1, -1 do
+            if game.lasers[i].state == "dead" then
+                table.remove(game.lasers, i)
             end
         end
     else
@@ -214,6 +225,25 @@ function love.draw()
         love.graphics.setColor(1, 0.3, 0.3)
         for _, spike in ipairs(game.spikes) do
             love.graphics.rectangle("fill", spike.x, spike.y, spike.spikeWidth or 20, spikeData.spikeHeight)
+        end
+        for _, laser in ipairs(game.lasers) do
+            if laser.state == "warning" then
+                love.graphics.rectangle(
+                    "fill",
+                    laser.x,
+                    laser.y + laser.height/2 - 5,
+                    laser.width,
+                    10
+                )
+            elseif laser.state == "active" then
+                love.graphics.rectangle(
+                    "fill",
+                    laser.x,
+                    laser.y,
+                    laser.width,
+                    laser.height
+                )
+            end
         end
         love.graphics.setColor(1, 1, 1)
         love.graphics.print(string.format("game.score: %03d", game.score), 20, 20)
